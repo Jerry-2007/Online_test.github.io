@@ -4,7 +4,6 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>红旗引征途 · 重走长征路</title>
-<script src="https://cdn.staticfile.org/qrcodejs/1.0.0/qrcode.min.js"></script>
 <link rel="preconnect" href="https://fonts.loli.net" crossorigin>
 <link href="https://fonts.loli.net/css2?family=Ma+Shan+Zheng&amp;text=%E7%AC%AC%E5%85%B31234567&amp;display=swap" rel="stylesheet">
 <style>
@@ -117,18 +116,9 @@
   }
   .route-map .st b{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:1px}
   .route-map .ln{flex:1;height:0;border-top:2px dashed rgba(210,74,58,.38);margin-top:5px;min-width:8px}
-  .qr-box{margin:34px auto 0;display:inline-flex;flex-direction:column;align-items:center;gap:10px;padding:16px 18px;border-radius:20px;background:#fdf6ec;border:1px dashed #e6c7a3}
-  .qr-mount{width:168px;height:168px;display:flex;align-items:center;justify-content:center;background:#fff;border-radius:12px;box-shadow:0 4px 12px rgba(80,30,10,.08);overflow:hidden}
-  .qr-box .ph{width:168px;height:168px;border-radius:12px;background:#f5e9d9;display:flex;align-items:center;justify-content:center;font-size:12px;color:#a08a72;padding:14px;text-align:center;line-height:1.9}
-  .qr-box.empty .qr-mount{display:none}
-  .qr-box:not(.empty) .ph{display:none}
-  .qr-box .tip{font-size:12px;color:var(--muted);max-width:230px;line-height:1.7}
-  .url-row{display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap}
-  .url-row input{border:1px solid #e6d3bd;border-radius:999px;padding:9px 16px;font-size:13px;width:min(400px,74vw);outline:none;background:#fffdf8}
   .btn{border:none;cursor:pointer;font:inherit;font-weight:700;border-radius:999px;transition:transform .15s ease}
   .btn:active{transform:scale(.97)}
   .btn-primary{color:#fff;background:linear-gradient(135deg,#d8402f,#9b1c1c);padding:13px 42px;font-size:16px;letter-spacing:4px;box-shadow:0 10px 22px rgba(155,28,28,.35);margin-top:26px}
-  .btn-mini{color:#8a5a30;background:#f5e6d2;padding:9px 18px;font-size:13px}
 
   /* ---------- 答题页 ---------- */
   .qhead{margin-top:26px;text-align:center;animation:cardIn .5s cubic-bezier(.22,.8,.3,1) backwards}
@@ -337,7 +327,6 @@
 
   /* ---------- 焦点可见性（键盘可达） ---------- */
   .option-card:focus-visible,.btn:focus-visible,#scrollHint:focus-visible{outline:3px solid rgba(200,50,43,.45);outline-offset:3px}
-  #urlInput:focus-visible{outline:3px solid rgba(200,50,43,.45);outline-offset:2px}
 
   /* ---------- 减弱动态效果降级（位移/缩放类动效全部关闭，仅保留状态色） ---------- */
   @media (prefers-reduced-motion:reduce){
@@ -530,6 +519,7 @@
       <span class="st"><i class="dot"></i><b>雪山</b></span><span class="ln"></span>
       <span class="st last"><i class="dot"></i><b>会宁</b></span>
     </div>
+    <button class="btn btn-primary" id="btnStart">出 发 · 瑞 金</button>
     <span class="seal" aria-hidden="true">
       <svg viewBox="0 0 120 120">
         <defs>
@@ -548,17 +538,6 @@
         </g>
       </svg>
     </span>
-    <div class="qr-box empty" id="qrBox">
-      <div class="qr-mount" id="qrMount"></div>
-      <div class="ph">尚无可访问的网址<br/>部署上线后在此生成二维码</div>
-      <span class="tip" id="qrHint"></span>
-    </div>
-    <div class="url-row">
-      <input id="urlInput" placeholder="粘贴部署后的网址（http/https 开头）" />
-      <button class="btn btn-mini" id="btnRegen">生成二维码</button>
-    </div>
-    <br/>
-    <button class="btn btn-primary" id="btnStart">出 发 · 瑞 金</button>
   </section>
 
   <!-- 答题页 -->
@@ -630,11 +609,10 @@
 </button>
 
 <!-- 版本标记（右下角，核对文件新旧用） -->
-<span class="ver" aria-hidden="true">V9</span>
+<span class="ver" aria-hidden="true">V10</span>
 
 <script>
 /* ================= 配置区 ================= */
-const QUIZ_URL = "https://jerry-2007.github.io/Online_test.github.io/";
 const TROOP_PER_QUESTION = 10000;
 const TROOP_SHOW_FROM = 3;
 const STAGES = ["瑞金出发","血战湘江","遵义会议","四渡赤水","飞夺泸定桥","翻越雪山","会宁会师"];
@@ -722,7 +700,6 @@ const QUESTIONS = [
 const $ = s => document.querySelector(s);
 const LETTERS = ["A","B","C","D"];
 const HUES = [10, 32, 200, 150];
-let customURL = QUIZ_URL || "";
 let idx = 0, score = 0, locked = false, answers = [], startTime = 0;
 let troopCount = 0, cheerShown = false;
 
@@ -736,39 +713,6 @@ function letterAvatar(ch, hue){
     `<text x="60" y="82" font-size="56" text-anchor="middle" fill="#fff" `+
     `font-family="Kaiti SC,KaiTi,STKaiti,serif" font-weight="700">${ch}</text></svg>`;
   return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
-}
-
-/* ---------- 二维码 ---------- */
-function isUsable(u){
-  try{ const p = new URL(u).protocol; return p === "http:" || p === "https:"; }
-  catch(e){ return false; }
-}
-function renderQR(text){
-  const mount = $("#qrMount");
-  mount.innerHTML = "";
-  if (window.QRCode){
-    const div = document.createElement("div");
-    mount.appendChild(div);
-    new QRCode(div, { text, width:168, height:168, correctLevel:QRCode.CorrectLevel.M });
-  } else {
-    const img = document.createElement("img");
-    img.width = 168; img.height = 168; img.alt = "二维码";
-    img.src = "https://api.qrserver.com/v1/create-qr-code/?size=168x168&margin=10&data=" + encodeURIComponent(text);
-    mount.appendChild(img);
-  }
-}
-function makeQR(){
-  const u = (customURL || location.href).trim();
-  if (isUsable(u)){
-    $("#qrBox").classList.remove("empty");
-    renderQR(u);
-    $("#qrHint").textContent = "手机扫码，直接开始答题";
-    $("#urlInput").value = u;
-  } else {
-    $("#qrBox").classList.add("empty");
-    $("#qrHint").textContent = "⚠️ 当前页面没有真实网址，扫码无法访问。请先按说明部署上线，再把链接粘贴到下方生成二维码";
-    $("#urlInput").value = "";
-  }
 }
 
 /* ---------- 兵力值 ---------- */
@@ -997,12 +941,6 @@ $("#btnNext").addEventListener("click", ()=>{
   if (idx === QUESTIONS.length-1) return finish();
   idx++; renderQuestion(); window.scrollTo({top:0, behavior:"smooth"});
 });
-$("#btnRegen").addEventListener("click", ()=>{
-  const v = $("#urlInput").value.trim();
-  if (v){ customURL = v; makeQR(); }
-});
-
-makeQR();
 </script>
 </body>
 </html>
