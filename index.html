@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>红旗引征途 · 重走长征路</title>
+<script src="https://cdn.staticfile.org/qrcodejs/1.0.0/qrcode.min.js"></script>
+<link rel="preconnect" href="https://fonts.loli.net" crossorigin>
+<link href="https://fonts.loli.net/css2?family=Ma+Shan+Zheng&amp;text=%E7%AC%AC%E5%85%B31234567&amp;display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#2b1a10; --muted:#8a7566;
+    --red:#c8322b; --red-deep:#9b1c1c;
+    --gold:#e0a04c; --gold-light:#f5d78a;
+    --green:#2fbf5f; --blue:#3d8bd6;
+    --shadow:0 10px 30px rgba(80,30,10,.10), 0 2px 6px rgba(80,30,10,.06);
+    /* 百叶窗节奏（调快调慢改这里） */
+    --card-step:.05s;    /* 选项卡之间错峰 */
+    --blind-dur:.22s;    /* 单片帘叶时长 */
+    --blind-step:.034s;  /* 帘叶之间错峰 */
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    min-height:100vh;position:relative;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(1100px 560px at 85% -10%, #ffe9d6 0%, transparent 60%),
+      radial-gradient(900px 520px at -10% 110%, #ffe0e0 0%, transparent 55%),
+      #faf5ef;
+    padding-bottom:150px;
+  }
+  /* 宣纸颗粒质感层：数字平涂 → 纸面质感（极淡，不干扰阅读） */
+  body::after{
+    content:"";position:fixed;inset:0;z-index:2000;pointer-events:none;
+    background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23g)'/%3E%3C/svg%3E");
+    opacity:.05;mix-blend-mode:multiply;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:22px 16px;position:relative;z-index:1}
+  .hidden{display:none !important}
+
+  /* ================= 背景纹样层（滚动淡入淡出 + 自上而下滑入） ================= */
+  .bg-deco{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+  .deco{
+    position:absolute;
+    opacity:0;
+    transform:translateY(-56px) scale(var(--s,1));
+    transition:opacity 1.1s ease, transform 1.1s cubic-bezier(.22,.8,.3,1);
+    will-change:opacity,transform;
+  }
+  .deco.visible{opacity:var(--o,.5);transform:translateY(0) scale(var(--s,1))}
+  .deco svg{display:block;width:100%;height:auto}
+  .deco .fl{animation:floaty 7s ease-in-out infinite;animation-delay:var(--d,0s)}
+  .deco.route{--o:.38}
+  @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(10px)}}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .brand{font-size:19px;font-weight:900;letter-spacing:2px;color:var(--red-deep)}
+  .chips{display:flex;gap:8px}
+  .chip{background:#fff;border-radius:999px;padding:6px 14px;font-size:13px;color:#7a5c46;box-shadow:0 2px 8px rgba(80,30,10,.08);white-space:nowrap}
+  /* 行军路线进度条：轨道 + 缝线填充 + 七个驿站节点 */
+  .route-bar{position:relative;margin:12px 2px 0}
+  .progress{height:6px;border-radius:999px;background:#eadcc8;overflow:hidden;margin:0}
+  .progress i{
+    display:block;height:100%;width:0;border-radius:999px;position:relative;
+    background:linear-gradient(90deg,var(--red-deep),var(--red) 55%,var(--gold));
+    transition:width .35s ease;
+  }
+  .progress i::after{
+    content:"";position:absolute;inset:0;
+    background:repeating-linear-gradient(115deg, rgba(255,255,255,.22) 0 6px, transparent 6px 14px);
+    animation:barFlow 1s linear infinite;   /* 缝线纹理持续向前流动 */
+  }
+  .progress i::before{
+    content:"";position:absolute;top:0;bottom:0;right:0;width:34px;
+    background:linear-gradient(90deg, transparent, rgba(255,240,200,.55));
+    border-radius:0 999px 999px 0;          /* 前锋亮点，随填充推进 */
+  }
+  @keyframes barFlow{to{background-position:22px 0}}
+  .route-bar .ms{
+    position:absolute;top:50%;width:11px;height:11px;border-radius:50%;
+    left:calc(var(--k)/7*100%);
+    transform:translate(-50%,-50%);
+    background:#faf5ef;border:2px solid #d9c3a8;z-index:2;
+    transition:background .25s ease, border-color .25s ease, box-shadow .25s ease;
+  }
+  .route-bar .ms.pass{background:var(--gold);border-color:#b57e2f;box-shadow:0 0 0 3px rgba(224,160,76,.28)}
+  .route-bar .ms.cur{background:#d24a3a;border-color:#a81a1a;box-shadow:0 0 0 3px rgba(210,74,58,.30)}
+
+  .card{background:#fff;border-radius:26px;box-shadow:var(--shadow)}
+
+  /* ---------- 开始页 ---------- */
+  .hero{margin-top:26px;padding:44px 28px 36px;text-align:center;position:relative}
+  .hero h1{
+    font-size:32px;letter-spacing:5px;font-weight:900;
+    background:linear-gradient(180deg,#a81a1a 0%,#c8322b 55%,#8f1515 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .hero .sub{color:var(--muted);margin-top:12px;font-size:14px;line-height:1.9}
+
+  /* 朱文印章 · 重走长征（hero 右上角落款） */
+  .seal{
+    position:absolute;top:42px;right:38px;width:86px;height:86px;
+    transform:rotate(-6deg);opacity:.92;pointer-events:none;
+    filter:drop-shadow(0 4px 10px rgba(155,28,28,.25));
+  }
+
+  /* 行军路线图 · 七站（瑞金 → 会宁） */
+  .route-map{display:flex;align-items:flex-start;gap:6px;margin:24px auto 0;max-width:520px;padding:0 6px}
+  .route-map .st{display:flex;flex-direction:column;align-items:center;gap:6px;flex:none}
+  .route-map .dot{width:11px;height:11px;border-radius:50%;background:#d24a3a;box-shadow:0 0 0 3px rgba(210,74,58,.16);margin-top:-1px}
+  .route-map .st.first .dot{background:var(--red-deep);width:13px;height:13px}
+  .route-map .st.last .dot{background:none;box-shadow:none;width:13px;height:13px;position:relative}
+  .route-map .st.last .dot::after{
+    content:"★";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:var(--gold);font-size:13px;line-height:1;
+  }
+  .route-map .st b{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:1px}
+  .route-map .ln{flex:1;height:0;border-top:2px dashed rgba(210,74,58,.38);margin-top:5px;min-width:8px}
+  .qr-box{margin:34px auto 0;display:inline-flex;flex-direction:column;align-items:center;gap:10px;padding:16px 18px;border-radius:20px;background:#fdf6ec;border:1px dashed #e6c7a3}
+  .qr-mount{width:168px;height:168px;display:flex;align-items:center;justify-content:center;background:#fff;border-radius:12px;box-shadow:0 4px 12px rgba(80,30,10,.08);overflow:hidden}
+  .qr-box .ph{width:168px;height:168px;border-radius:12px;background:#f5e9d9;display:flex;align-items:center;justify-content:center;font-size:12px;color:#a08a72;padding:14px;text-align:center;line-height:1.9}
+  .qr-box.empty .qr-mount{display:none}
+  .qr-box:not(.empty) .ph{display:none}
+  .qr-box .tip{font-size:12px;color:var(--muted);max-width:230px;line-height:1.7}
+  .url-row{display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+  .url-row input{border:1px solid #e6d3bd;border-radius:999px;padding:9px 16px;font-size:13px;width:min(400px,74vw);outline:none;background:#fffdf8}
+  .btn{border:none;cursor:pointer;font:inherit;font-weight:700;border-radius:999px;transition:transform .15s ease}
+  .btn:active{transform:scale(.97)}
+  .btn-primary{color:#fff;background:linear-gradient(135deg,#d8402f,#9b1c1c);padding:13px 42px;font-size:16px;letter-spacing:4px;box-shadow:0 10px 22px rgba(155,28,28,.35);margin-top:26px}
+  .btn-mini{color:#8a5a30;background:#f5e6d2;padding:9px 18px;font-size:13px}
+
+  /* ---------- 答题页 ---------- */
+  .qhead{margin-top:26px;text-align:center;animation:cardIn .5s cubic-bezier(.22,.8,.3,1) backwards}
+  #qTag{
+    display:inline-block;vertical-align:middle;
+    background:linear-gradient(135deg,#c8322b,#a81a1a);color:#f8e9d8;
+    padding:6px 24px 6px 15px;font-size:16px;letter-spacing:3px;
+    font-family:"Ma Shan Zheng","Kaiti SC","KaiTi",STKaiti,"PingFang SC",serif;
+    clip-path:polygon(0 0,100% 0,calc(100% - 11px) 50%,100% 100%,0 100%);
+    border-radius:5px 0 0 5px;
+  }
+  .qtitle{margin-top:12px;font-size:22px;font-weight:800;line-height:1.6}
+  .qtitle::after{
+    content:"";display:block;width:46px;height:3px;margin:14px auto 0;border-radius:2px;
+    background:linear-gradient(90deg,transparent,var(--gold),transparent);
+  }
+  .options{display:flex;flex-direction:column;align-items:center;gap:58px;padding-top:66px}
+  .option-card{
+    position:relative;width:min(620px,100%);
+    display:flex;align-items:center;gap:16px;
+    padding:24px 30px 24px 140px;
+    background:#fff;border-radius:26px;border:2px solid transparent;
+    box-shadow:var(--shadow);cursor:pointer;text-align:left;
+    font:inherit;color:inherit;
+    transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+    animation:cardFade .2s ease backwards;
+    animation-delay:calc(var(--ci,0)*var(--card-step));
+  }
+  @keyframes cardIn{from{opacity:0;transform:translateY(-36px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes cardFade{from{opacity:0}}
+
+  /* ---------- 选项卡 · 百叶窗滑动特效（渐变叠加 + 淡入淡出） ---------- */
+  .blinds{
+    position:absolute;inset:0;z-index:4;
+    display:flex;overflow:hidden;border-radius:inherit;
+    pointer-events:none;
+  }
+  .blinds i{
+    flex:1;transform-origin:50% 0;transform:scaleY(1);
+    background:linear-gradient(180deg, rgba(216,64,47,.92) 0%, rgba(224,150,76,.88) 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.28), inset -1px 0 0 rgba(120,20,10,.16);
+    animation:blindOpen var(--blind-dur) cubic-bezier(.5,.05,.3,1) forwards;
+    animation-delay:calc(var(--ci,0)*var(--card-step) + .08s + var(--si,0)*var(--blind-step));
+    will-change:transform,opacity;
+  }
+  .blinds i:nth-child(even){
+    background:linear-gradient(180deg, rgba(200,50,43,.96) 0%, rgba(230,170,90,.92) 100%);
+  }
+  @keyframes blindOpen{to{transform:scaleY(0);opacity:0}}
+
+  /* 答题反馈 · 金色渐变扫光（沿百叶窗容器滑过，带圆角裁剪） */
+  .blinds .sweep{
+    position:absolute;inset:0;
+    transform:translateX(-130%);opacity:0;
+    background:linear-gradient(115deg, transparent 30%, rgba(255,236,190,.6) 50%, transparent 70%);
+  }
+  .option-card.reveal .blinds .sweep{animation:sweep .5s cubic-bezier(.3,.2,.2,1) forwards}
+  @keyframes sweep{from{transform:translateX(-130%);opacity:1}to{transform:translateX(130%);opacity:0}}
+  .option-card:not(.done):hover{transform:translateY(-3px);box-shadow:0 16px 34px rgba(80,30,10,.15);border-color:rgba(224,160,76,.6)}
+  .option-card:not(.done):active{transform:scale(.985)}
+  .option-card.done{cursor:default}
+  .option-card.is-correct{border-color:#9fe0b2;background:linear-gradient(180deg,#ffffff,#f3fbf6)}
+  .option-card.is-wrong{border-color:#f4b3ae;background:linear-gradient(180deg,#ffffff,#fdf3f2)}
+
+  /* ---------- 长征主题 · 选项卡片右上角纹样 ---------- */
+  .option-card::before{
+    content:"";
+    position:absolute; top:0; right:0;
+    width:120px; height:90px;
+    background:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='90' viewBox='0 0 120 90'%3E%3Cdefs%3E%3CradialGradient id='glow' cx='0.72' cy='0.38' r='0.65'%3E%3Cstop offset='0' stop-color='%23d24a3a' stop-opacity='0.18'/%3E%3Cstop offset='1' stop-color='%23d24a3a' stop-opacity='0'/%3E%3C/radialGradient%3E%3ClinearGradient id='star' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23e2594a' stop-opacity='0.5'/%3E%3Cstop offset='1' stop-color='%23a82820' stop-opacity='0.12'/%3E%3C/linearGradient%3E%3ClinearGradient id='wave' x1='0' y1='0' x2='1' y2='0'%3E%3Cstop offset='0' stop-color='%23c8322b' stop-opacity='0'/%3E%3Cstop offset='1' stop-color='%23c8322b' stop-opacity='0.28'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='120' height='90' fill='url(%23glow)'/%3E%3Cpath d='M0,84 C28,76 50,78 70,62 C84,51 100,49 120,54 L120,90 L0,90 Z' fill='url(%23wave)'/%3E%3Cpath d='M85,18 L89.5,31.9 L104,31.8 L92.2,40.4 L96.8,54.2 L85,45.6 L73.2,54.2 L77.8,40.4 L66,31.8 L80.5,31.9 Z' fill='url(%23star)'/%3E%3C/svg%3E") no-repeat top right / 120px 90px;
+    pointer-events:none;
+    border-top-right-radius:24px;
+  }
+
+  .avatar-wrap{position:absolute;left:10px;top:-44px;width:108px;height:108px;pointer-events:none;
+    animation:avatarIn .32s cubic-bezier(.22,.8,.3,1) backwards;
+    animation-delay:calc(var(--ci,0)*var(--card-step) + .11s)}
+  @keyframes avatarIn{from{opacity:0;transform:translateY(-26px)}}
+  .avatar-wrap .blob{position:absolute;left:16px;top:18px;width:80px;height:80px;border-radius:50%;background:#fbe0c8}
+  .avatar-wrap img{position:relative;width:100%;height:100%;object-fit:cover;border-radius:50%;border:4px solid #fff;background:#fff;box-shadow:0 8px 18px rgba(80,30,10,.20);display:block}
+
+  .option-body{min-width:0;
+    animation:contentIn .3s cubic-bezier(.22,.8,.3,1) backwards;
+    animation-delay:calc(var(--ci,0)*var(--card-step) + .13s)}
+  @keyframes contentIn{from{opacity:0;transform:translateY(14px)}}
+  .opt-top{display:flex;align-items:center;gap:10px}
+  .opt-letter{flex:none;width:24px;height:24px;border-radius:50%;background:#f7e6d2;color:#a06a35;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center}
+  .opt-name{font-size:19px;font-weight:800}
+  .opt-desc{display:block;color:var(--muted);font-size:13px;margin-top:5px;line-height:1.5}
+
+  .badge{position:absolute;right:-14px;top:50%;transform:translateY(-50%);width:46px;height:46px;border-radius:50%;display:none;align-items:center;justify-content:center;font-size:21px;font-weight:900;color:#fff;z-index:3}
+  .option-card.is-correct .badge{display:flex;background:var(--green);box-shadow:0 6px 16px rgba(47,191,95,.45)}
+  .option-card.is-wrong  .badge{display:flex;background:#f2453d;box-shadow:0 6px 16px rgba(242,69,61,.45)}
+
+  .feedback{max-width:620px;margin:30px auto 0;padding:18px 22px;display:none;animation:pop .25s ease;border-left:4px solid rgba(224,160,76,.75);border-radius:14px 26px 26px 14px}
+  .feedback.show{display:block}
+  .feedback .tag{font-size:15px;font-weight:800}
+  .feedback .fb-station{margin-top:6px;font-size:12.5px;color:#a06a35;font-weight:700;letter-spacing:2px}
+  .feedback.good .tag{color:var(--green)}
+  .feedback.bad  .tag{color:#e04040}
+  .feedback p{color:#6b5847;font-size:14px;line-height:1.8;margin-top:6px}
+  .feedback .foot{display:flex;justify-content:flex-end;margin-top:12px}
+  .btn-next{color:#fff;background:linear-gradient(135deg,#d8402f,#9b1c1c);padding:10px 30px;font-size:14px;letter-spacing:2px;box-shadow:0 8px 18px rgba(155,28,28,.3)}
+
+  /* ---------- 兵力值条（答对第3题后显示） ---------- */
+  #troopBar{
+    position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(140%);
+    z-index:50;min-width:280px;max-width:92vw;
+    padding:14px 26px;border-radius:999px;
+    background:linear-gradient(135deg,#a81a1a 0%,#c8322b 45%,#e0a04c 130%);
+    color:#fff;box-shadow:0 12px 28px rgba(155,28,28,.4), inset 0 1px 0 rgba(255,255,255,.25);
+    display:flex;align-items:center;gap:12px;
+    transition:transform .45s cubic-bezier(.2,.9,.3,1.2), opacity .45s ease;
+    pointer-events:none;font-weight:800;
+    opacity:0;   /* 基底不可见：停车位置不再影响可见性（修复底部露条） */
+  }
+  #troopBar.show{transform:translateX(-50%) translateY(0);opacity:1}
+  #troopBar.fadeout{opacity:0;transform:translateX(-50%) translateY(24px)}
+  #troopBar .flag{font-size:22px;line-height:1}
+  #troopBar .label{font-size:13px;letter-spacing:2px;opacity:.9}
+  #troopBar .num{font-size:26px;font-weight:900;letter-spacing:1px;font-variant-numeric:tabular-nums}
+  #troopBar .unit{font-size:13px;opacity:.9;margin-left:-4px}
+
+  /* ---------- 祝贺横幅（答题结算后弹出） ---------- */
+  #cheerBar{
+    position:fixed;left:50%;bottom:92px;transform:translateX(-50%) translateY(140%);
+    z-index:49;min-width:280px;max-width:92vw;
+    padding:12px 26px;border-radius:999px;
+    background:linear-gradient(135deg,#f5d78a,#e0a04c);
+    color:#7a2a10;box-shadow:0 10px 24px rgba(224,160,76,.4), inset 0 1px 0 rgba(255,255,255,.5);
+    display:flex;align-items:center;gap:10px;
+    font-weight:900;font-size:15px;letter-spacing:2px;
+    transition:transform .45s cubic-bezier(.2,.9,.3,1.2) .1s, opacity .45s ease;
+    animation:glow 2s ease-in-out infinite;
+    pointer-events:none;
+    opacity:0;   /* 基底不可见：修复「translateY(140%)只挪53px、横幅一直停在屏底39px处」的露条bug */
+  }
+  #cheerBar.show{transform:translateX(-50%) translateY(0);opacity:1}
+  #cheerBar.fadeout{opacity:0;transform:translateX(-50%) translateY(24px)}
+  @keyframes glow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.12)}}
+
+  /* ---------- 下滑引导箭头（答完题且解析在屏外时出现） ---------- */
+  #scrollHint{
+    position:fixed;left:50%;bottom:28px;z-index:60;
+    transform:translateX(-50%) translateY(18px);opacity:0;pointer-events:none;
+    display:flex;align-items:center;gap:9px;
+    padding:10px 20px 10px 13px;border:none;border-radius:999px;cursor:pointer;
+    background:linear-gradient(135deg,#c8322b,#a81a1a);
+    color:#fff;font:inherit;font-size:13px;font-weight:700;letter-spacing:1px;
+    box-shadow:0 10px 24px rgba(155,28,28,.38), inset 0 1px 0 rgba(255,255,255,.22);
+    transition:opacity .3s ease, transform .35s cubic-bezier(.22,.8,.3,1), bottom .35s ease;
+  }
+  #scrollHint.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+  #scrollHint.with-troop{bottom:96px}    /* 避让兵力条（兵力条淡出后自动降回） */
+  #scrollHint .hint-arrows{position:relative;width:22px;height:23px;flex:none;color:var(--gold-light)}
+  #scrollHint .hint-arrows svg{position:absolute;left:0;display:block;width:22px;height:11px;animation:hintFlow 1.5s ease-in-out infinite}
+  #scrollHint .hint-arrows svg:first-child{top:0}
+  #scrollHint .hint-arrows svg:last-child{top:10px;animation-delay:.22s}
+  @keyframes hintFlow{0%,100%{transform:translateY(0);opacity:1}45%{transform:translateY(5px);opacity:.05}}
+  .ver{position:fixed;right:10px;bottom:8px;z-index:45;font-size:10px;letter-spacing:1px;font-weight:700;color:rgba(43,26,16,.30);pointer-events:none}
+
+  /* ---------- 成绩页 ---------- */
+  .result{max-width:620px;margin:34px auto 0;padding:36px 30px;text-align:center}
+  .medal{margin-bottom:6px}
+  .medal svg{display:block;margin:0 auto;filter:drop-shadow(0 8px 16px rgba(181,126,47,.35))}
+  .rank{
+    display:inline-block;margin-top:6px;padding:6px 18px;
+    border:2px solid #c8322b;color:#c8322b;background:rgba(200,50,43,.05);
+    font-weight:900;letter-spacing:4px;border-radius:10px;transform:rotate(-2deg);
+  }
+  .score-num{margin-top:16px;font-size:64px;font-weight:900;line-height:1;background:linear-gradient(135deg,#d8402f,#e0a04c);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .result .msg{margin-top:10px;color:var(--muted);font-size:14px}
+  .troop-final{margin-top:18px;display:inline-block;padding:12px 26px;border-radius:999px;background:linear-gradient(135deg,#a81a1a,#e0a04c);color:#fff;font-weight:900;font-size:18px;letter-spacing:1px;box-shadow:0 8px 20px rgba(155,28,28,.3)}
+  .review{margin-top:22px;text-align:left;display:flex;flex-direction:column;gap:10px}
+  .review-item{background:#faf3ea;border-radius:14px;padding:12px 16px;font-size:13.5px;line-height:1.7;border-left:3px solid rgba(224,160,76,.6)}
+  .ok{color:var(--green);font-weight:800}
+  .no{color:#e04040;font-weight:800}
+  .center{display:flex;justify-content:center;gap:12px;margin-top:24px;flex-wrap:wrap;align-items:center}
+
+  @keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  @media (max-width:520px){
+    :root{--card-step:.04s;--blind-step:.03s}  /* 手机端整体提速 20% */
+    .avatar-wrap{width:90px;height:90px;top:-36px;left:6px}
+    .avatar-wrap .blob{width:66px;height:66px;left:12px;top:14px}
+    .seal{position:static;display:block;margin:16px auto 0;width:58px;height:58px;transform:rotate(-4deg)}
+    .route-map{gap:4px;margin-top:20px}
+    .route-map .st b{font-size:10px;letter-spacing:0}
+    .route-map .dot{width:9px;height:9px}
+    .route-map .st.first .dot,.route-map .st.last .dot{width:11px;height:11px}
+    .route-bar .ms{width:9px;height:9px}
+    .medal svg{width:64px}
+    .rank{letter-spacing:2px;padding:5px 14px}
+    .option-card{padding:20px 22px 20px 116px;gap:12px;border-radius:22px}
+    .options{gap:48px;padding-top:56px}
+    .opt-name{font-size:17px}
+    .badge{width:40px;height:40px;font-size:18px;right:-10px}
+    .hero h1{font-size:26px;letter-spacing:3px}
+    #troopBar{padding:12px 20px;min-width:250px}
+    #troopBar .num{font-size:22px}
+    #cheerBar{font-size:13px;padding:10px 18px}
+    .option-card::before{width:100px;height:75px;background-size:100px 75px}
+    .deco{--s:.8}
+    .deco.route{--o:.22;right:2px;width:44px !important}
+  }
+
+  /* ---------- 焦点可见性（键盘可达） ---------- */
+  .option-card:focus-visible,.btn:focus-visible,#scrollHint:focus-visible{outline:3px solid rgba(200,50,43,.45);outline-offset:3px}
+  #urlInput:focus-visible{outline:3px solid rgba(200,50,43,.45);outline-offset:2px}
+
+  /* ---------- 减弱动态效果降级（位移/缩放类动效全部关闭，仅保留状态色） ---------- */
+  @media (prefers-reduced-motion:reduce){
+    .blinds{display:none}
+    .qhead,.option-card,.option-body,.avatar-wrap,.feedback.show,.progress i{animation:none}
+    .progress i::after{animation:none}   /* 进度条流动纹理关闭 */
+    #cheerBar{animation:none;transition:none}
+    #troopBar,.btn,.option-card,.deco{transition:none}
+    .route-bar .ms{transition:none}
+    #scrollHint{transition:none}
+    #scrollHint .hint-arrows svg{animation:none}
+    .deco .fl{animation:none}
+    .option-card:not(.done):hover{transform:none}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= 背景纹样层 ================= -->
+<div class="bg-deco" aria-hidden="true">
+  <!-- 红绸 · 右上 -->
+  <div class="deco" style="--o:.5; right:-70px; top:2%; width:340px; --d:.4s">
+    <svg viewBox="0 0 400 180">
+      <defs><linearGradient id="bdB" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#c8322b" stop-opacity="0"/>
+        <stop offset=".45" stop-color="#d24a3a" stop-opacity=".5"/>
+        <stop offset="1" stop-color="#c8322b" stop-opacity="0"/>
+      </linearGradient></defs>
+      <path d="M0,95 C70,40 150,150 230,95 C290,55 350,75 400,45 L400,90 C350,120 290,100 230,140 C150,195 70,85 0,140 Z" fill="url(#bdB)"/>
+    </svg>
+  </div>
+
+  <!-- 大五角星（描边渐变） · 左上 -->
+  <div class="deco" style="--o:.5; left:-50px; top:6%; width:240px; --d:0s">
+    <svg viewBox="0 0 200 190">
+      <defs><linearGradient id="bdA" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#e2594a" stop-opacity=".6"/>
+        <stop offset="1" stop-color="#a82820" stop-opacity=".05"/>
+      </linearGradient></defs>
+      <path d="M100,14 L120.2,76.2 L185.6,76.2 L132.6,114.6 L152.9,176.8 L100,138.3 L47.1,176.8 L67.4,114.6 L14.4,76.2 L79.8,76.2 Z"
+            fill="none" stroke="url(#bdA)" stroke-width="4" stroke-linejoin="round"/>
+    </svg>
+  </div>
+
+  <!-- 小星 · 左上区 -->
+  <div class="deco" style="--o:.55; left:20%; top:13%; width:36px; --d:.9s">
+    <svg class="fl" viewBox="-12 -12 24 24">
+      <defs><linearGradient id="bdS0" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#e2594a" stop-opacity=".6"/>
+        <stop offset="1" stop-color="#a82820" stop-opacity=".15"/>
+      </linearGradient></defs>
+      <path d="M0,-9 L2.02,-2.78 L8.56,-2.78 L3.27,1.06 L5.29,7.28 L0,3.44 L-5.29,7.28 L-3.27,1.06 L-8.56,-2.78 L-2.02,-2.78 Z" fill="url(#bdS0)"/>
+    </svg>
+  </div>
+
+  <!-- 祥云 · 左中 -->
+  <div class="deco" style="--o:.45; left:4%; top:21%; width:150px; --d:1s">
+    <svg class="fl" viewBox="0 0 170 90">
+      <defs><linearGradient id="bdC" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#d24a3a" stop-opacity=".08"/>
+        <stop offset="1" stop-color="#d24a3a" stop-opacity=".5"/>
+      </linearGradient></defs>
+      <g fill="none" stroke="url(#bdC)" stroke-width="4" stroke-linecap="round">
+        <path d="M18,64 a15,15 0 0 1 30,0 h7 a12,12 0 0 1 24,0 h7 a10,10 0 0 1 20,0 h40"/>
+        <path d="M34,58 a11,11 0 0 1 20,-5"/>
+        <path d="M72,58 a9,9 0 0 1 16,-4"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- 小星 · 右侧 -->
+  <div class="deco" style="--o:.55; right:13%; top:33%; width:54px; --d:.7s">
+    <svg class="fl" viewBox="-12 -12 24 24">
+      <defs><linearGradient id="bdS1" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#e2594a" stop-opacity=".65"/>
+        <stop offset="1" stop-color="#a82820" stop-opacity=".12"/>
+      </linearGradient></defs>
+      <path d="M0,-9 L2.02,-2.78 L8.56,-2.78 L3.27,1.06 L5.29,7.28 L0,3.44 L-5.29,7.28 L-3.27,1.06 L-8.56,-2.78 L-2.02,-2.78 Z" fill="url(#bdS1)"/>
+    </svg>
+  </div>
+
+  <!-- 长征路线 · 点状虚线（右侧贯穿全页） -->
+  <div class="deco route" style="right:8px; top:0; height:100%; width:70px; --d:.2s">
+    <svg viewBox="0 0 70 900" preserveAspectRatio="none" style="width:100%;height:100%">
+      <defs><linearGradient id="bdR" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#d24a3a" stop-opacity="0"/>
+        <stop offset=".15" stop-color="#d24a3a" stop-opacity=".55"/>
+        <stop offset=".85" stop-color="#d24a3a" stop-opacity=".55"/>
+        <stop offset="1" stop-color="#d24a3a" stop-opacity="0"/>
+      </linearGradient></defs>
+      <path d="M35,20 C10,100 62,180 35,260 C8,340 62,420 35,500 C8,580 62,660 35,740 C15,800 45,850 35,880"
+            fill="none" stroke="url(#bdR)" stroke-width="3.5"
+            stroke-dasharray="0.5 16" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+    </svg>
+  </div>
+
+  <!-- 小星 · 左中下 -->
+  <div class="deco" style="--o:.5; left:9%; top:46%; width:40px; --d:1.2s">
+    <svg class="fl" viewBox="-12 -12 24 24">
+      <defs><linearGradient id="bdS2" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#e2594a" stop-opacity=".55"/>
+        <stop offset="1" stop-color="#a82820" stop-opacity=".1"/>
+      </linearGradient></defs>
+      <path d="M0,-9 L2.02,-2.78 L8.56,-2.78 L3.27,1.06 L5.29,7.28 L0,3.44 L-5.29,7.28 L-3.27,1.06 L-8.56,-2.78 L-2.02,-2.78 Z" fill="url(#bdS2)"/>
+    </svg>
+  </div>
+
+  <!-- 祥云 · 右中下 -->
+  <div class="deco" style="--o:.42; right:6%; top:60%; width:130px; --d:.5s">
+    <svg class="fl" viewBox="0 0 170 90">
+      <defs><linearGradient id="bdE" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#c8322b" stop-opacity=".08"/>
+        <stop offset="1" stop-color="#c8322b" stop-opacity=".45"/>
+      </linearGradient></defs>
+      <g fill="none" stroke="url(#bdE)" stroke-width="4" stroke-linecap="round">
+        <path d="M18,64 a15,15 0 0 1 30,0 h7 a12,12 0 0 1 24,0 h7 a10,10 0 0 1 20,0 h40"/>
+        <path d="M34,58 a11,11 0 0 1 20,-5"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- 红绸 · 左中下 -->
+  <div class="deco" style="--o:.45; left:-80px; top:74%; width:320px; --d:.8s">
+    <svg viewBox="0 0 400 180">
+      <defs><linearGradient id="bdD" x1="1" y1="0" x2="0" y2="0">
+        <stop offset="0" stop-color="#c8322b" stop-opacity="0"/>
+        <stop offset=".5" stop-color="#d24a3a" stop-opacity=".45"/>
+        <stop offset="1" stop-color="#c8322b" stop-opacity="0"/>
+      </linearGradient></defs>
+      <path d="M400,80 C330,30 250,140 170,85 C110,45 60,70 0,40 L0,85 C60,115 110,95 170,135 C250,190 330,75 400,125 Z" fill="url(#bdD)"/>
+    </svg>
+  </div>
+
+  <!-- 小星 · 右下 -->
+  <div class="deco" style="--o:.55; right:18%; top:84%; width:44px; --d:1.4s">
+    <svg class="fl" viewBox="-12 -12 24 24">
+      <defs><linearGradient id="bdS3" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#e2594a" stop-opacity=".6"/>
+        <stop offset="1" stop-color="#a82820" stop-opacity=".12"/>
+      </linearGradient></defs>
+      <path d="M0,-9 L2.02,-2.78 L8.56,-2.78 L3.27,1.06 L5.29,7.28 L0,3.44 L-5.29,7.28 L-3.27,1.06 L-8.56,-2.78 L-2.02,-2.78 Z" fill="url(#bdS3)"/>
+    </svg>
+  </div>
+
+  <!-- 远山剪影 · 底部 -->
+  <div class="deco" style="--o:.5; left:0; right:0; bottom:0; width:100%; --d:.6s">
+    <svg viewBox="0 0 800 150" preserveAspectRatio="none" style="width:100%;height:150px">
+      <defs>
+        <linearGradient id="bdM1" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#c05a48" stop-opacity=".3"/>
+          <stop offset="1" stop-color="#c05a48" stop-opacity="0"/>
+        </linearGradient>
+        <linearGradient id="bdM2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#a82820" stop-opacity=".2"/>
+          <stop offset="1" stop-color="#a82820" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="M0,150 L0,105 L90,55 L170,95 L260,35 L350,90 L430,60 L520,100 L610,45 L700,85 L800,60 L800,150 Z" fill="url(#bdM2)"/>
+      <!-- 雪山雪顶 · 呼应"翻越夹金山" -->
+      <path d="M224,64 L260,35 L296,64 L286,58 L274,66 L260,58 L246,66 L234,58 Z" fill="#ffffff" fill-opacity=".5"/>
+      <path d="M578,74 L610,45 L642,74 L632,68 L620,76 L610,68 L598,76 L588,68 Z" fill="#ffffff" fill-opacity=".42"/>
+      <path d="M0,150 L0,125 L110,90 L220,120 L330,75 L450,115 L560,85 L680,120 L800,95 L800,150 Z" fill="url(#bdM1)"/>
+    </svg>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">🚩 红旗引征途 · 重走长征路</div>
+    <div class="chips">
+      <span class="chip" id="scoreChip">答对 0</span>
+      <span class="chip" id="posChip">- / -</span>
+    </div>
+  </div>
+  <div class="route-bar">
+    <div class="progress"><i id="bar"></i></div>
+    <span class="ms" style="--k:1"></span><span class="ms" style="--k:2"></span><span class="ms" style="--k:3"></span><span class="ms" style="--k:4"></span><span class="ms" style="--k:5"></span><span class="ms" style="--k:6"></span><span class="ms" style="--k:7"></span>
+  </div>
+
+  <!-- 开始页 -->
+  <section id="screenStart" class="card hero">
+    <h1>重 走 长 征 路</h1>
+    <p class="sub">答对题目积累兵力，重走瑞金到会宁的万里征途<br/>答对第 3 题点亮兵力，答对第 5 题解锁祝贺</p>
+    <div class="route-map" aria-hidden="true">
+      <span class="st first"><i class="dot"></i><b>瑞金</b></span><span class="ln"></span>
+      <span class="st"><i class="dot"></i><b>湘江</b></span><span class="ln"></span>
+      <span class="st"><i class="dot"></i><b>遵义</b></span><span class="ln"></span>
+      <span class="st"><i class="dot"></i><b>赤水</b></span><span class="ln"></span>
+      <span class="st"><i class="dot"></i><b>泸定</b></span><span class="ln"></span>
+      <span class="st"><i class="dot"></i><b>雪山</b></span><span class="ln"></span>
+      <span class="st last"><i class="dot"></i><b>会宁</b></span>
+    </div>
+    <span class="seal" aria-hidden="true">
+      <svg viewBox="0 0 120 120">
+        <defs>
+          <filter id="sealRgh" x="-8%" y="-8%" width="116%" height="116%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="3" seed="7" result="n"/>
+            <feDisplacementMap in="SourceGraphic" in2="n" scale="4"/>
+          </filter>
+        </defs>
+        <g filter="url(#sealRgh)">
+          <rect x="8" y="8" width="104" height="104" rx="12" fill="#b3231c"/>
+          <rect x="17" y="17" width="86" height="86" rx="5" fill="none" stroke="#f8e9d8" stroke-width="2.5" opacity=".9"/>
+          <text x="39" y="51" text-anchor="middle" font-size="33" fill="#f8e9d8" font-weight="900" font-family="Kaiti SC,KaiTi,STKaiti,PingFang SC,serif">重</text>
+          <text x="81" y="51" text-anchor="middle" font-size="33" fill="#f8e9d8" font-weight="900" font-family="Kaiti SC,KaiTi,STKaiti,PingFang SC,serif">走</text>
+          <text x="39" y="94" text-anchor="middle" font-size="33" fill="#f8e9d8" font-weight="900" font-family="Kaiti SC,KaiTi,STKaiti,PingFang SC,serif">长</text>
+          <text x="81" y="94" text-anchor="middle" font-size="33" fill="#f8e9d8" font-weight="900" font-family="Kaiti SC,KaiTi,STKaiti,PingFang SC,serif">征</text>
+        </g>
+      </svg>
+    </span>
+    <div class="qr-box empty" id="qrBox">
+      <div class="qr-mount" id="qrMount"></div>
+      <div class="ph">尚无可访问的网址<br/>部署上线后在此生成二维码</div>
+      <span class="tip" id="qrHint"></span>
+    </div>
+    <div class="url-row">
+      <input id="urlInput" placeholder="粘贴部署后的网址（http/https 开头）" />
+      <button class="btn btn-mini" id="btnRegen">生成二维码</button>
+    </div>
+    <br/>
+    <button class="btn btn-primary" id="btnStart">出 发 · 瑞 金</button>
+  </section>
+
+  <!-- 答题页 -->
+  <section id="screenQuiz" class="hidden">
+    <div class="qhead">
+      <span class="chip" id="qTag">第 1 关</span>
+      <h2 class="qtitle" id="qTitle"></h2>
+    </div>
+    <div class="options" id="options"></div>
+    <div class="feedback card" id="feedback">
+      <div class="tag" id="fbTag"></div>
+      <div class="fb-station" id="fbStation"></div>
+      <p id="fbText"></p>
+      <div class="foot"><button class="btn btn-next" id="btnNext">下一关 →</button></div>
+    </div>
+  </section>
+
+  <!-- 成绩页 -->
+  <section id="screenResult" class="hidden">
+    <div class="card result">
+      <div class="medal" aria-hidden="true">
+        <svg viewBox="0 0 120 126" width="84">
+          <defs>
+            <linearGradient id="mdG" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#f5d78a"/><stop offset=".55" stop-color="#e0a04c"/><stop offset="1" stop-color="#b57e2f"/>
+            </linearGradient>
+            <linearGradient id="mdR" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#c8322b"/><stop offset="1" stop-color="#8f1515"/>
+            </linearGradient>
+          </defs>
+          <path d="M40,0 L60,30 L80,0 L106,0 L76,52 L60,40 L44,52 L14,0 Z" fill="url(#mdR)"/>
+          <circle cx="60" cy="86" r="34" fill="url(#mdG)"/>
+          <circle cx="60" cy="86" r="27.5" fill="none" stroke="#f8e9d8" stroke-width="2"/>
+          <circle cx="60" cy="86" r="24" fill="#b3231c"/>
+          <path d="M60,68 L63.9,78.7 L75.2,79.1 L66.3,86 L69.4,96.9 L60,90.6 L50.6,96.9 L53.7,86 L44.8,79.1 L56.1,78.7 Z" fill="url(#mdG)"/>
+        </svg>
+      </div>
+      <div class="rank" id="rankTag">红军战士</div>
+      <div class="score-num" id="finalScore">0</div>
+      <p class="msg" id="finalMsg"></p>
+      <div class="troop-final" id="finalTroop">⚔️ 最终兵力 0</div>
+      <div class="review" id="review"></div>
+      <div class="center">
+        <button class="btn btn-primary" id="btnRestart" style="margin-top:0">再走一次</button>
+        <button class="btn btn-mini" id="btnBack">返回首页</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- 兵力值条 -->
+<div id="troopBar">
+  <span class="flag">🚩</span>
+  <span class="label">当前兵力</span>
+  <span class="num" id="troopNum">0</span>
+  <span class="unit">人</span>
+</div>
+
+<!-- 祝贺横幅：默认由 CSS 藏在屏幕外(translateY 140%)，全程唯一弹出时机=点「会师·查看成绩」进入结算(finish())，弹出后约1秒自动淡出。答题页不会出现。 -->
+<div id="cheerBar">🎉 恭喜你，助力长征更进一步！</div>
+
+<!-- 下滑引导箭头（答完题且解析在屏外时出现） -->
+<button id="scrollHint" type="button" aria-label="下滑查看解析并进入下一关">
+  <span class="hint-arrows" aria-hidden="true">
+    <svg viewBox="0 0 22 11" fill="none"><path d="M2.5,2 L11,9 L19.5,2" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg viewBox="0 0 22 11" fill="none"><path d="M2.5,2 L11,9 L19.5,2" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </span>
+  <span class="hint-txt">下滑看解析 · 进下一关</span>
+</button>
+
+<!-- 版本标记（右下角，核对文件新旧用） -->
+<span class="ver" aria-hidden="true">V9</span>
+
+<script>
+/* ================= 配置区 ================= */
+const QUIZ_URL = "https://jerry-2007.github.io/Online_test.github.io/";
+const TROOP_PER_QUESTION = 10000;
+const TROOP_SHOW_FROM = 3;
+const STAGES = ["瑞金出发","血战湘江","遵义会议","四渡赤水","飞夺泸定桥","翻越雪山","会宁会师"];
+
+const QUESTIONS = [
+  {
+    q: "红军长征的出发地是哪里？",
+    options: [
+      { text: "江西井冈山", desc: "革命摇篮，第一个农村革命根据地" },
+      { text: "江西瑞金", desc: "中华苏维埃共和国临时中央政府所在地", img: "" },
+      { text: "陕北延安", desc: "长征胜利后的革命圣地" },
+      { text: "贵州遵义", desc: "遵义会议召开地" }
+    ],
+    answer: 1,
+    explain: "1934年10月，中央红军从江西瑞金出发，开始了举世闻名的二万五千里长征。"
+  },
+  {
+    q: "长征初期最惨烈的一战，红军从8万多人锐减到3万多人，这一战是？",
+    options: [
+      { text: "湘江战役", desc: "血战湘江，突破第四道封锁线" },
+      { text: "四渡赤水", desc: "毛泽东军事指挥的\u201c得意之笔\u201d" },
+      { text: "飞夺泸定桥", desc: "22勇士强渡大渡河" },
+      { text: "直罗镇战役", desc: "为党中央落脚陕北奠基" }
+    ],
+    answer: 0,
+    explain: "1934年底的湘江战役是长征初期最惨烈的战斗，中央红军由出发时的8.6万余人锐减到3万余人。"
+  },
+  {
+    q: "确立了毛泽东在党中央和红军的领导地位的会议是？",
+    options: [
+      { text: "八七会议", desc: "确定土地革命和武装反抗国民党的总方针" },
+      { text: "瓦窑堡会议", desc: "确定建立抗日民族统一战线的方针" },
+      { text: "遵义会议", desc: "党的历史上生死攸关的转折点" },
+      { text: "洛川会议", desc: "制定全面抗战路线" }
+    ],
+    answer: 2,
+    explain: "1935年1月的遵义会议，事实上确立了毛泽东在党中央和红军的领导地位，是党的历史上生死攸关的转折点。"
+  },
+  {
+    q: "被毛泽东称为自己军事指挥\u201c得意之笔\u201d的是哪次战役？",
+    options: [
+      { text: "辽沈战役", desc: "解放战争三大战役之一" },
+      { text: "四渡赤水", desc: "声东击西，跳出敌人包围圈" },
+      { text: "百团大战", desc: "八路军主动出击日军的最大规模战役" },
+      { text: "淮海战役", desc: "解放战争战略决战重要战役" }
+    ],
+    answer: 1,
+    explain: "四渡赤水（1935年1-3月）中，红军在毛泽东指挥下声东击西、灵活机动，成功跳出几十万敌军的围追堵截。"
+  },
+  {
+    q: "\u201c飞夺泸定桥\u201d发生在哪条河流上？",
+    options: [
+      { text: "金沙江", desc: "巧渡金沙江，跳出包围圈" },
+      { text: "乌江", desc: "突破乌江天险" },
+      { text: "大渡河", desc: "泸定桥横跨其上" },
+      { text: "赤水河", desc: "四渡赤水的战场" }
+    ],
+    answer: 2,
+    explain: "1935年5月29日，红四团22位勇士冒枪林弹雨攀铁索飞夺泸定桥，强渡大渡河，粉碎了敌人让红军成为\u201c石达开第二\u201d的企图。"
+  },
+  {
+    q: "红军翻越的第一座大雪山是？",
+    options: [
+      { text: "夹金山", desc: "海拔4000多米，终年积雪" },
+      { text: "玉龙雪山", desc: "位于云南丽江" },
+      { text: "梦笔山", desc: "红军后续翻越的雪山之一" },
+      { text: "长白山", desc: "东北抗联战斗的地方" }
+    ],
+    answer: 0,
+    explain: "1935年6月，红军翻越了第一座大雪山——夹金山，随后进入松潘草地，创造了人类历史上的奇迹。"
+  },
+  {
+    q: "红军三大主力会师、标志长征胜利结束的地点是？",
+    options: [
+      { text: "陕西吴起镇", desc: "中央红军到达陕北的落脚点" },
+      { text: "甘肃会宁", desc: "三大主力会师地" },
+      { text: "宁夏将台堡", desc: "红一、二方面军会师地之一" },
+      { text: "陕西延安", desc: "长征后的革命大本营" }
+    ],
+    answer: 1,
+    explain: "1936年10月，红一、二、四方面军在甘肃会宁和将台堡胜利会师，标志着红军长征胜利结束。"
+  }
+];
+/* ================= 逻辑代码 ================= */
+const $ = s => document.querySelector(s);
+const LETTERS = ["A","B","C","D"];
+const HUES = [10, 32, 200, 150];
+let customURL = QUIZ_URL || "";
+let idx = 0, score = 0, locked = false, answers = [], startTime = 0;
+let troopCount = 0, cheerShown = false;
+
+function letterAvatar(ch, hue){
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120">`+
+    `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">`+
+    `<stop offset="0" stop-color="hsl(${hue},75%,82%)"/>`+
+    `<stop offset="1" stop-color="hsl(${hue},60%,58%)"/></linearGradient></defs>`+
+    `<circle cx="60" cy="60" r="60" fill="url(#g)"/>`+
+    `<text x="60" y="82" font-size="56" text-anchor="middle" fill="#fff" `+
+    `font-family="Kaiti SC,KaiTi,STKaiti,serif" font-weight="700">${ch}</text></svg>`;
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+}
+
+/* ---------- 二维码 ---------- */
+function isUsable(u){
+  try{ const p = new URL(u).protocol; return p === "http:" || p === "https:"; }
+  catch(e){ return false; }
+}
+function renderQR(text){
+  const mount = $("#qrMount");
+  mount.innerHTML = "";
+  if (window.QRCode){
+    const div = document.createElement("div");
+    mount.appendChild(div);
+    new QRCode(div, { text, width:168, height:168, correctLevel:QRCode.CorrectLevel.M });
+  } else {
+    const img = document.createElement("img");
+    img.width = 168; img.height = 168; img.alt = "二维码";
+    img.src = "https://api.qrserver.com/v1/create-qr-code/?size=168x168&margin=10&data=" + encodeURIComponent(text);
+    mount.appendChild(img);
+  }
+}
+function makeQR(){
+  const u = (customURL || location.href).trim();
+  if (isUsable(u)){
+    $("#qrBox").classList.remove("empty");
+    renderQR(u);
+    $("#qrHint").textContent = "手机扫码，直接开始答题";
+    $("#urlInput").value = u;
+  } else {
+    $("#qrBox").classList.add("empty");
+    $("#qrHint").textContent = "⚠️ 当前页面没有真实网址，扫码无法访问。请先按说明部署上线，再把链接粘贴到下方生成二维码";
+    $("#urlInput").value = "";
+  }
+}
+
+/* ---------- 兵力值 ---------- */
+function animateNumber(el, to, done){
+  const from = parseInt(el.textContent.replace(/,/g,"")) || 0;
+  if (from === to || REDUCED.matches){ el.textContent = to.toLocaleString(); if (done) done(); return; }
+  const dur = 600, start = performance.now();
+  function step(t){
+    const p = Math.min(1, (t-start)/dur);
+    const eased = 1 - Math.pow(1-p, 3);
+    el.textContent = Math.round(from + (to-from)*eased).toLocaleString();
+    if (p < 1) requestAnimationFrame(step);
+    else if (done) done();
+  }
+  requestAnimationFrame(step);
+}
+let troopFadeTimer = 0, troopClearTimer = 0, cheerTimers = [];
+function updateTroop(){
+  if (score < TROOP_SHOW_FROM) return;
+  const tb = $("#troopBar");
+  clearTimeout(troopFadeTimer); clearTimeout(troopClearTimer);
+  tb.classList.remove("fadeout");
+  tb.classList.add("show");
+  animateNumber($("#troopNum"), troopCount, ()=>{
+    /* 数字涨完后 ~1s 淡出退场，避免与引导箭头长期叠加 */
+    troopFadeTimer = setTimeout(()=>{
+      tb.classList.add("fadeout");
+      troopClearTimer = setTimeout(()=>{
+        tb.classList.remove("show","fadeout");
+        scrollHint.classList.remove("with-troop");   /* 兵力条退场后引导箭头降回低位 */
+      }, 480);
+    }, 1000);
+  });
+}
+
+/* ---------- 答题 ---------- */
+function renderQuestion(){
+  const qn = QUESTIONS[idx];
+  locked = false;
+  /* 关卡标签不剧透站名，站名改为答题后在解析区揭示 */
+  $("#qTag").textContent = `第 ${idx+1} 关`;
+  $("#qTitle").textContent = qn.q;
+  $("#posChip").textContent = `${idx+1} / ${QUESTIONS.length}`;
+  $("#bar").style.width = ((idx+1)/QUESTIONS.length*100) + "%";
+  document.querySelectorAll(".route-bar .ms").forEach((m,k)=>{
+    m.classList.toggle("pass", k+1 <= idx);      /* 已走过的驿站 → 金 */
+    m.classList.toggle("cur",  k+1 === idx+1);   /* 当前驿站 → 红 */
+  });
+  $("#feedback").classList.remove("show","good","bad");
+  hideHintInstant();   /* 新题目：引导复位 */
+  const box = $("#options"); box.innerHTML = "";
+  qn.options.forEach((opt,i)=>{
+    const btn = document.createElement("button");
+    btn.className = "option-card";
+    btn.style.setProperty("--ci", i);           /* 百叶窗错峰序号 */
+    const strips = Array.from({length:8},(_,k)=>`<i style="--si:${k}"></i>`).join("");
+    btn.innerHTML =
+      `<span class="blinds" aria-hidden="true">${strips}<b class="sweep"></b></span>`+
+      `<span class="avatar-wrap"><span class="blob"></span>`+
+      `<img alt="${opt.text}" src="${opt.img || letterAvatar(opt.text.trim().charAt(0), HUES[i%4])}" `+
+      `onerror="this.onerror=null;this.src=letterAvatar(this.alt.trim().charAt(0),${HUES[i%4]})">`+
+      `</span>`+
+      `<span class="option-body">`+
+        `<span class="opt-top"><span class="opt-letter">${LETTERS[i]}</span><span class="opt-name">${opt.text}</span></span>`+
+        `<span class="opt-desc">${opt.desc||""}</span>`+
+      `</span>`+
+      `<span class="badge"></span>`;
+    btn.addEventListener("click", ()=>pick(i, btn));
+    box.appendChild(btn);
+  });
+}
+
+function pick(i, btn){
+  if (locked) return;
+  locked = true;
+  const qn = QUESTIONS[idx];
+  answers[idx] = i;
+  document.querySelectorAll(".option-card").forEach((c,j)=>{
+    c.classList.add("done");
+    if (j === qn.answer){ c.classList.add("is-correct"); c.querySelector(".badge").textContent = "✓"; }
+  });
+  /* 金色渐变扫光：点亮点选卡与正确卡 */
+  btn.classList.add("reveal");
+  const correctBtn = document.querySelectorAll(".option-card")[qn.answer];
+  if (correctBtn) correctBtn.classList.add("reveal");
+  const good = i === qn.answer;
+  if (good){
+    score++;
+    troopCount += TROOP_PER_QUESTION;
+  } else {
+    btn.classList.add("is-wrong"); btn.querySelector(".badge").textContent = "✕";
+  }
+  $("#scoreChip").textContent = "答对 " + score;
+  updateTroop();
+  const fb = $("#feedback");
+  fb.classList.add("show", good ? "good" : "bad");
+  $("#fbTag").textContent = good ? "✓ 回答正确！" : "✕ 回答错误";
+  $("#fbStation").textContent = `—— 已抵达 · ${STAGES[idx] || "长征路上"} ——`;
+  $("#fbText").textContent = qn.explain || "";
+  $("#btnNext").textContent = idx === QUESTIONS.length-1 ? "会师 · 查看成绩 →" : "下一关 →";
+  /* 下滑引导：等扫光/徽章动画播完后（550ms），解析仍在屏外才弹出箭头 */
+  setTimeout(()=>{
+    if (!fb.classList.contains("show") || feedbackInView()) return;
+    scrollHint.classList.toggle("with-troop", $("#troopBar").classList.contains("show"));
+    scrollHint.classList.add("show");
+  }, 550);
+}
+
+/* ---------- 下滑引导箭头 ---------- */
+const scrollHint = $("#scrollHint");
+const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)");
+function feedbackInView(){
+  const r = $("#feedback").getBoundingClientRect();
+  return r.top < innerHeight*.75 && r.bottom > innerHeight*.25;
+}
+function hideHintInstant(){
+  /* 瞬间关闭：跳过淡出过渡 */
+  scrollHint.style.transition = "none";
+  scrollHint.classList.remove("show");
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ scrollHint.style.transition = ""; }));
+}
+scrollHint.addEventListener("click", ()=>{
+  hideHintInstant();
+  $("#feedback").scrollIntoView({behavior: REDUCED.matches ? "auto" : "smooth", block: "center"});
+});
+/* 用户一下滑立即收起（不必等到解析完全入视口） */
+let lastScrollY = window.scrollY;
+window.addEventListener("scroll", ()=>{
+  const y = window.scrollY;
+  if (y - lastScrollY > 8 && scrollHint.classList.contains("show")) hideHintInstant();
+  lastScrollY = y;
+}, {passive:true});
+/* 解析区滚入视口 → 引导即时退场 */
+if ("IntersectionObserver" in window){
+  new IntersectionObserver(es=>{
+    es.forEach(e=>{ if (e.isIntersecting) hideHintInstant(); });
+  }, {threshold:.35}).observe($("#feedback"));
+}
+/* 恭喜横幅瞬时清除（离开结果页时调用，跳过滑动/淡出过渡） */
+function hideCheerInstant(){
+  const cb = $("#cheerBar");
+  cheerTimers.forEach(clearTimeout); cheerTimers = [];
+  if (!cb.classList.contains("show") && !cb.classList.contains("fadeout")) return;
+  cb.style.transition = "none";
+  cb.classList.remove("show","fadeout");
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ cb.style.transition = ""; }));
+}
+
+function showScreen(name){
+  ["screenStart","screenQuiz","screenResult"].forEach(id=>$("#"+id).classList.add("hidden"));
+  $("#"+name).classList.remove("hidden");
+  /* 离开结果页：恭喜横幅瞬时清除（含 pending 定时器），任何页面不再残留 */
+  if (name !== "screenResult") hideCheerInstant();
+}
+
+function startQuiz(){
+  idx = 0; score = 0; answers = []; startTime = Date.now();
+  troopCount = 0; cheerShown = false;
+  clearTimeout(troopFadeTimer); clearTimeout(troopClearTimer);
+  cheerTimers.forEach(clearTimeout); cheerTimers = [];
+  $("#troopBar").classList.remove("show","fadeout");
+  $("#cheerBar").classList.remove("show","fadeout");
+  $("#troopNum").textContent = "0";
+  $("#scoreChip").textContent = "答对 0";
+  showScreen("screenQuiz");
+  renderQuestion();
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function finish(){
+  hideHintInstant();
+  /* 兵力条即时退场，结算页由军功章与最终兵力接管 */
+  clearTimeout(troopFadeTimer); clearTimeout(troopClearTimer);
+  $("#troopBar").classList.remove("show","fadeout");
+  /* 恭喜横幅：点击「会师·查看成绩」后弹出，约1s后淡出退场（与兵力条同款瞬态节奏） */
+  if (!cheerShown){
+    cheerShown = true;
+    cheerTimers.push(setTimeout(()=>$("#cheerBar").classList.add("show"), 500));
+    cheerTimers.push(setTimeout(()=>{
+      $("#cheerBar").classList.add("fadeout");
+      cheerTimers.push(setTimeout(()=>$("#cheerBar").classList.remove("show","fadeout"), 500));
+    }, 1500));
+  }
+  const secs = Math.round((Date.now()-startTime)/1000);
+  const m = Math.floor(secs/60), s = secs%60;
+  const ratio = score / QUESTIONS.length;
+  $("#rankTag").textContent =
+    score === QUESTIONS.length ? "长征先锋" :
+    score >= 6 ? "钢铁红军" : score >= 4 ? "红军战士" : score >= 2 ? "红军新兵" : "新兵报到";
+  /* 抵达会宁：全线驿站点亮 */
+  $("#bar").style.width = "100%";
+  document.querySelectorAll(".route-bar .ms").forEach(m=>{ m.classList.add("pass"); m.classList.remove("cur"); });
+  $("#finalScore").textContent = `${score} / ${QUESTIONS.length}`;
+  $("#finalMsg").textContent =
+    (ratio===1 ? "满分！长征路上的英雄就是你 🏆" : ratio>=0.6 ? "不错哦，继续加油！💪" : "万里长征从头越，再走一次吧～🚩")
+    + `　用时 ${m}分${String(s).padStart(2,"0")}秒`;
+  $("#finalTroop").textContent = `⚔️ 最终兵力 ${troopCount.toLocaleString()} 人`;
+  const rv = $("#review"); rv.innerHTML = "";
+  QUESTIONS.forEach((qn,i)=>{
+    const ok = answers[i] === qn.answer;
+    const div = document.createElement("div");
+    div.className = "review-item";
+    div.innerHTML = `<b>${i+1}.</b>${qn.q}<br/>`+
+      `正确答案：<span class="ok">${LETTERS[qn.answer]} ${qn.options[qn.answer].text}</span>　`+
+      `你的选择：<span class="${ok?"ok":"no"}">${answers[i]!=null ? LETTERS[answers[i]]+" "+qn.options[answers[i]].text : "未作答"}</span>`;
+    rv.appendChild(div);
+  });
+  showScreen("screenResult");
+}
+
+/* ---------- 背景纹样 · 滚动淡入淡出 ---------- */
+const decoIO = ("IntersectionObserver" in window)
+  ? new IntersectionObserver(es=>{
+      es.forEach(e=>e.target.classList.toggle("visible", e.isIntersecting));
+    }, {threshold:0, rootMargin:"0px 0px -6% 0px"})
+  : null;
+document.querySelectorAll(".deco").forEach(d=>{
+  if (decoIO) decoIO.observe(d);
+  else d.classList.add("visible");
+});
+
+$("#btnStart").addEventListener("click", startQuiz);
+$("#btnRestart").addEventListener("click", startQuiz);
+$("#btnBack").addEventListener("click", ()=>showScreen("screenStart"));
+$("#btnNext").addEventListener("click", ()=>{
+  if (idx === QUESTIONS.length-1) return finish();
+  idx++; renderQuestion(); window.scrollTo({top:0, behavior:"smooth"});
+});
+$("#btnRegen").addEventListener("click", ()=>{
+  const v = $("#urlInput").value.trim();
+  if (v){ customURL = v; makeQR(); }
+});
+
+makeQR();
+</script>
+</body>
+</html>
